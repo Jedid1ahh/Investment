@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantro: Transaction History</title>
+    <meta name="description" content="View a complete, detailed, and filterable history of all your financial transactions on the Quantro platform.">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        /* TRANSACTIONS PAGE SPECIFIC STYLES */
+        
+        main {
+            padding-top: var(--nav-height);
+            min-height: 100vh;
+        }
+
+        .transactions-header {
+            border-bottom: 2px solid var(--color-primary);
+            padding-bottom: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .filter-card {
+            background-color: var(--bs-card-bg);
+            border: 1px solid var(--bs-card-border-color);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 2rem;
+        }
+        
+        /* Table Styling */
+        #transaction-table-container {
+            overflow-x: auto;
+        }
+
+        #transaction-history-table {
+            min-width: 900px;
+        }
+
+        #transaction-history-table th {
+            color: var(--color-primary);
+        }
+
+        .txn-deposit { color: #28a745; }
+        .txn-withdrawal_request, .txn-purchase { color: #dc3545; }
+        .txn-payout, .txn-bonus { color: #00bcd4; }
+    </style>
+</head>
+<body>
+    <canvas id="backgroundCanvas"></canvas>
+
+    <nav class="navbar navbar-expand-lg sticky-top" id="main-nav">
+        <div class="container-fluid container-xxl">
+            <a class="navbar-brand logo-animate" href="index.html">
+                <span class="logo-q">Q</span>uantro
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNav" aria-controls="dashboardNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="dashboardNav">
+                <ul class="navbar-nav align-items-lg-center">
+                    <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="fas fa-home me-1"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="plans.html"><i class="fas fa-gem me-1"></i> Buy Plan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="withdraw.html"><i class="fas fa-credit-card me-1"></i> Withdraw</a></li>
+                    <li class="nav-item"><a class="nav-link" href="referral.html"><i class="fas fa-user-friends me-1"></i> Referral</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="transactions.html"><i class="fas fa-list-alt me-1"></i> History</a></li> 
+                    <li class="nav-item mx-lg-3">
+                        <button class="btn btn-sm btn-outline-danger magnetic-btn click-ripple" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <div class="form-check form-switch ms-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch">
+                            <label class="form-check-label" for="darkModeSwitch"><i class="fas fa-moon"></i></label>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-fluid container-xxl py-5">
+        
+        <header class="transactions-header">
+            <h1 class="display-5 fw-bold"><i class="fas fa-history text-primary me-2"></i> Transaction History</h1>
+            <p class="lead">A complete audit trail of all your financial movements since joining Quantro.</p>
+        </header>
+
+        <div class="filter-card shadow">
+            <h5 class="fw-bold mb-3"><i class="fas fa-filter me-2"></i> Filter & Search</h5>
+            <form id="transaction-filter-form" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="filter-type" class="form-label">Transaction Type</label>
+                    <select class="form-select" id="filter-type">
+                        <option value="all">All Types</option>
+                        <option value="deposit">Deposit</option>
+                        <option value="withdrawal_request">Withdrawal Request</option>
+                        <option value="purchase">Plan Purchase (Debit)</option>
+                        <option value="payout">Plan Payout (Credit)</option>
+                        <option value="bonus">Referral Bonus (Credit)</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="filter-reference" class="form-label">Search Ref ID</label>
+                    <input type="text" class="form-control" id="filter-reference" placeholder="Enter Reference ID...">
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-primary magnetic-btn click-ripple">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="button" class="btn btn-outline-success magnetic-btn click-ripple" id="export-btn">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <section id="transaction-table-container" class="filter-card shadow">
+            <table class="table table-hover text-light align-middle" id="transaction-history-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Type</th>
+                        <th>Amount (₦)</th>
+                        <th>Reference ID</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="transactions-table-body">
+                    <tr><td colspan="6" class="text-center text-muted py-5">Loading transactions...</td></tr>
+                </tbody>
+            </table>
+            <div id="no-transactions-message" class="text-center text-muted py-3 d-none">No transactions match the current filters.</div>
+        </section>
+
+    </main>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="script.js"></script> 
+    <script>
+        // Check authentication and load data
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentUser = api_getCurrentUser();
+            if (!currentUser) {
+                window.location.href = 'auth.html';
+                return;
+            }
+
+            // Initialize general utilities
+            if (typeof initDynamicBackground === 'function') initDynamicBackground();
+            if (typeof initCursorFollower === 'function') initCursorFollower();
+            if (typeof initMagneticEffects === 'function') initMagneticEffects();
+            if (typeof initDarkModeToggle === 'function') initDarkModeToggle();
+            
+            // Transactions specific initializations
+            initTransactionsPage(currentUser);
+            document.getElementById('logout-btn').addEventListener('click', api_logoutUser);
+        });
+    </script>
+</body>
+      </html>
+              
