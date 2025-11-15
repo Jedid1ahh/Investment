@@ -2069,3 +2069,213 @@ function loadReferralHistory(referredUsers) {
 //  JSON backend simulation and UI logic across all 5 pages.)
 // =========================================================================
            
+/* =========================================================================
+   *** CONTINUATION OF script.js - TRANSACTIONS HISTORY LOGIC ***
+   ========================================================================= */
+
+/* =========================================================================
+   16. TRANSACTION HISTORY LOGIC (transactions.html)
+   ========================================================================= */
+
+/**
+ * Maps transaction types to descriptive names and CSS classes.
+ * @param {string} type
+ * @returns {object} { name, colorClass }
+ */
+function getTxnMetaData(type) {
+    switch (type) {
+        case 'deposit':
+            return { name: 'Deposit (Credit)', colorClass: 'txn-deposit' };
+        case 'withdrawal_request':
+            return { name: 'Withdrawal Request (Debit)', colorClass: 'txn-withdrawal_request' };
+        case 'purchase':
+            return { name: 'Plan Purchase (Debit)', colorClass: 'txn-purchase' };
+        case 'payout':
+            return { name: 'Plan Payout (Credit)', colorClass: 'txn-payout' };
+        case 'bonus':
+            return { name: 'Referral Bonus (Credit)', colorClass: 'txn-bonus' };
+        default:
+            return { name: 'Other', colorClass: '' };
+    }
+}
+
+/**
+ * Generates a detailed description based on transaction metadata.
+ * @param {object} txn
+ * @returns {string} Detailed description.
+ */
+function getTxnDescription(txn) {
+    switch (txn.type) {
+        case 'deposit':
+            return `Funds deposited via simulated bank transfer. Ref: ${txn.reference}`;
+        case 'withdrawal_request':
+            return `Request to withdraw funds. Processing required.`;
+        case 'purchase':
+            const plans = api_getAllPlans();
+            const plan = plans.find(p => p.id === txn.meta?.plan_id);
+            return `Investment purchase: ${plan ? plan.name : 'Unknown Plan'}. Principal locked.`;
+        case 'payout':
+            return `Matured investment payout. Principal (${formatCurrency(txn.meta.principal)}) + ROI (${formatCurrency(txn.meta.roi)}) credited.`;
+        case 'bonus':
+            return `Referral bonus earned (5%) from user ID ${txn.meta.referred_id}'s investment.`;
+        default:
+            return `General Transaction: ${txn.reference}`;
+    }
+}
+
+/**
+ * Main initialization function for the Transactions page.
+ * @param {object} currentUser
+ */
+function initTransactionsPage(currentUser) {
+    const filterForm = document.getElementById('transaction-filter-form');
+    const exportBtn = document.getElementById('export-btn');
+    
+    // Initial load of all user transactions
+    let allTransactions = _getTransactions().filter(t => t.user_id === currentUser.id);
+    // Sort by date (newest first)
+    allTransactions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    renderTransactions(allTransactions);
+
+    // 1. Setup Filter Form Submission
+    filterForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        applyFilters(currentUser.id);
+    });
+    
+    // 2. Setup Export Button
+    exportBtn.addEventListener('click', () => {
+        const filteredTxns = applyFilters(currentUser.id, false); // Get current filtered data
+        exportToCSV(filteredTxns);
+    });
+}
+
+/**
+ * Applies filters to the transaction data and re-renders the table.
+ * @param {number} userId
+ * @param {boolean} render - If true, re-renders the table.
+ * @returns {Array} The filtered transaction list.
+ */
+function applyFilters(userId, render = true) {
+    const allTxns = _getTransactions().filter(t => t.user_id === userId);
+    
+    const typeFilter = document.getElementById('filter-type').value;
+    const refFilter = document.getElementById('filter-reference').value.toLowerCase();
+    
+    let filteredTxns = allTxns.filter(txn => {
+        // Filter by Type
+        const matchesType = typeFilter === 'all' || txn.type === typeFilter;
+        
+        // Filter by Reference ID
+        const matchesRef = txn.reference.toLowerCase().includes(refFilter);
+        
+        return matchesType && matchesRef;
+    });
+
+    filteredTxns.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    if (render) {
+        renderTransactions(filteredTxns);
+    }
+    
+    return filteredTxns;
+}
+
+
+/**
+ * Renders the transactions into the HTML table.
+ * @param {Array} transactions
+ */
+function renderTransactions(transactions) {
+    const tbody = document.getElementById('transactions-table-body');
+    const noTxnsEl = document.getElementById('no-transactions-message');
+    tbody.innerHTML = '';
+    
+    if (transactions.length === 0) {
+        tbody.innerHTML = '';
+        noTxnsEl.classList.remove('d-none');
+        return;
+    }
+    
+    noTxnsEl.classList.add('d-none');
+
+    transactions.forEach(txn => {
+        const meta = getTxnMetaData(txn.type);
+        const description = getTxnDescription(txn);
+        const status = txn.meta?.status || (txn.type.includes('request') ? 'Pending' : 'Completed');
+        const statusBadge = `<span class="badge bg-${status === 'Pending' ? 'warning text-dark' : 'success'}">${status}</span>`;
+        
+        // Ensure amount displays correctly (debits are negative, credits are positive)
+        let amountDisplay = parseFloat(txn.amount);
+        if (txn.type === 'withdrawal_request' || txn.type === 'purchase') {
+            amountDisplay = -Math.abs(amountDisplay); // Force negative for debits
+        }
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${new Date(txn.created_at).toLocaleString()}</td>
+            <td><strong class="${meta.colorClass}">${meta.name.split(' ')[0]}</strong></td>
+            <td><strong class="${amountDisplay < 0 ? 'text-danger' : 'text-success'}">${formatCurrency(amountDisplay)}</strong></td>
+            <td>${txn.reference}</td>
+            <td><small class="text-muted">${description}</small></td>
+            <td>${statusBadge}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+/**
+ * Simulates exporting the filtered transaction data to a CSV file.
+ * @param {Array} transactions
+ */
+function exportToCSV(transactions) {
+    if (transactions.length === 0) {
+        alert("No transactions to export based on current filters.");
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Header Row
+    csvContent += "Date,Type,Amount,Reference ID,Description,Status\n";
+
+    // Data Rows
+    transactions.forEach(txn => {
+        const meta = getTxnMetaData(txn.type);
+        const description = getTxnDescription(txn).replace(/,/g, ''); // Remove commas from descriptions
+        const status = txn.meta?.status || (txn.type.includes('request') ? 'Pending' : 'Completed');
+        
+        let amount = parseFloat(txn.amount);
+        if (txn.type === 'withdrawal_request' || txn.type === 'purchase') {
+            amount = -Math.abs(amount); 
+        }
+
+        const row = [
+            new Date(txn.created_at).toISOString(),
+            meta.name,
+            amount.toFixed(2),
+            txn.reference,
+            description,
+            status
+        ].join(",");
+        
+        csvContent += row + "\n";
+    });
+
+    // Simulated download action (Microinteraction)
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `quantro_statement_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    alert("Transaction history exported successfully as CSV!");
+}
+
+// =========================================================================
+// *** END OF TRANSACTIONS PAGE LOGIC ***
+// =========================================================================
+                    
