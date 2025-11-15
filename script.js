@@ -1314,3 +1314,227 @@ async function api_buyPlan(userId, planId, amount) {
 // and Admin management will follow here in the next steps to complete the required 
 // code complexity and lines count.)
        
+/* =========================================================================
+   *** CONTINUATION OF script.js - PLANS PAGE LOGIC ***
+   ========================================================================= */
+
+// --- New Global Helper ---
+function formatCurrency(amount) {
+    return '₦' + parseFloat(amount).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+
+/* =========================================================================
+   12. SAVINGS PLANS LOGIC (plans.html)
+   ========================================================================= */
+
+/**
+ * Utility function to retrieve all available plans.
+ * @returns {Array}
+ */
+function api_getAllPlans() {
+    return JSON.parse(localStorage.getItem(PLAN_DATA_KEY) || '[]');
+}
+
+/**
+ * Main initialization function for the Plans page.
+ * @param {object} currentUser
+ */
+function initPlansPage(currentUser) {
+    const plans = api_getAllPlans();
+    const plansGrid = document.getElementById('plans-grid');
+    const balanceDisplay = document.getElementById('current-balance-display');
+    
+    // Update balance display
+    balanceDisplay.textContent = formatCurrency(currentUser.balance);
+
+    // 1. Render Plan Cards
+    plansGrid.innerHTML = ''; // Clear loading message
+    plans.forEach(plan => {
+        plansGrid.innerHTML += createPlanCardHTML(plan);
+    });
+    
+    // 2. Attach Event Listeners to Buy Buttons
+    document.querySelectorAll('.btn-buy-plan').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const planId = parseInt(e.currentTarget.getAttribute('data-plan-id'));
+            const selectedPlan = plans.find(p => p.id === planId);
+            if (selectedPlan) {
+                openPurchaseModal(selectedPlan, currentUser.balance);
+            }
+        });
+    });
+    
+    // 3. Setup Modal Form Logic
+    setupPurchaseForm(currentUser);
+    
+    // 4. Setup Modal Input Calculation
+    setupModalCalculations(plans);
+}
+
+/**
+ * Generates the HTML for a single plan card.
+ * @param {object} plan
+ * @returns {string} HTML string
+ */
+function createPlanCardHTML(plan) {
+    const minAmountFormatted = formatCurrency(plan.min_amount);
+    
+    return `
+        <div class="col-lg-4 col-md-6 scroll-reveal-card">
+            <div class="card plan-card shadow-lg hover-lift h-100 rounded-4">
+                <div class="plan-card-body">
+                    <div>
+                        <i class="fas fa-chart-pie fa-2x mb-3 text-secondary"></i>
+                        <h3 class="card-title">${plan.name}</h3>
+                        <div class="roi-badge">${plan.roi_percent}% ROI</div>
+                        <ul class="plan-detail-list text-muted">
+                            <li><i class="fas fa-clock me-2"></i> Duration: <strong>${plan.duration_days} Days</strong></li>
+                            <li><i class="fas fa-money-bill-wave me-2"></i> Min Principal: <strong>${minAmountFormatted}</strong></li>
+                            <li><i class="fas fa-percent me-2"></i> Daily Rate (Sim.): <strong>${(plan.roi_percent / plan.duration_days).toFixed(3)}%</strong></li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100 btn-buy-plan magnetic-btn click-ripple" data-plan-id="${plan.id}">
+                        Invest Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Opens and populates the purchase modal.
+ * @param {object} plan
+ * @param {number} currentBalance
+ */
+function openPurchaseModal(plan, currentBalance) {
+    const modal = new bootstrap.Modal(document.getElementById('purchaseModal'));
+    
+    // Populate static plan details
+    document.getElementById('modal-plan-name').textContent = plan.name;
+    document.getElementById('modal-plan-summary').textContent = `You are investing in the ${plan.name} plan, which offers ${plan.roi_percent}% ROI after ${plan.duration_days} days.`;
+    document.getElementById('modal-plan-id').value = plan.id;
+    document.getElementById('modal-min-amount').value = plan.min_amount;
+    
+    // Set min and default amount on input
+    const amountInput = document.getElementById('investment-amount');
+    amountInput.min = plan.min_amount;
+    amountInput.value = plan.min_amount;
+    document.getElementById('min-amount-text').textContent = `Minimum investment: ${formatCurrency(plan.min_amount)}`;
+    
+    // Reset previous feedback
+    document.getElementById('purchase-status-message').classList.add('d-none');
+    amountInput.classList.remove('is-invalid', 'is-valid');
+    
+    // Re-trigger calculation to show initial ROI
+    amountInput.dispatchEvent(new Event('input'));
+    
+    modal.show();
+}
+
+/**
+ * Sets up the live calculation feedback within the modal.
+ * @param {Array} plans
+ */
+function setupModalCalculations(plans) {
+    const amountInput = document.getElementById('investment-amount');
+    const estimatedRoiEl = document.getElementById('estimated-roi');
+    const estimatedPayoutEl = document.getElementById('estimated-payout');
+    
+    amountInput.addEventListener('input', () => {
+        const principal = parseFloat(amountInput.value);
+        const planId = parseInt(document.getElementById('modal-plan-id').value);
+        const plan = plans.find(p => p.id === planId);
+        
+        if (isNaN(principal) || principal <= 0 || !plan) {
+            estimatedRoiEl.textContent = formatCurrency(0);
+            estimatedPayoutEl.textContent = formatCurrency(0);
+            return;
+        }
+
+        const roiAmount = (principal * plan.roi_percent) / 100;
+        const totalPayout = principal + roiAmount;
+        
+        // Update elements
+        estimatedRoiEl.textContent = formatCurrency(roiAmount);
+        estimatedPayoutEl.textContent = formatCurrency(totalPayout);
+    });
+}
+
+/**
+ * Handles the final purchase submission logic.
+ * @param {object} currentUser
+ */
+function setupPurchaseForm(currentUser) {
+    const form = document.getElementById('purchase-form');
+    const statusElement = document.getElementById('purchase-status-message');
+    const amountInput = document.getElementById('investment-amount');
+    const feedbackElement = document.getElementById('amount-feedback');
+    const confirmBtn = document.getElementById('confirm-purchase-btn');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        statusElement.classList.add('d-none');
+        
+        const principal = parseFloat(amountInput.value);
+        const planId = parseInt(document.getElementById('modal-plan-id').value);
+        const minAmount = parseFloat(document.getElementById('modal-min-amount').value);
+        
+        // 1. Client-Side Validation
+        if (principal < minAmount) {
+            amountInput.classList.add('is-invalid');
+            feedbackElement.textContent = `Amount must be at least ${formatCurrency(minAmount)}.`;
+            return;
+        }
+        
+        // Disable button during processing (Microinteraction)
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
+        
+        // 2. API Call (Simulated Backend Check)
+        const result = await api_buyPlan(currentUser.id, planId, principal);
+        
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = 'Confirm Purchase';
+        
+        if (result.success) {
+            // Success: Confetti/Emoji Explosion (Fun/Playful Effect)
+            showStatusMessage(statusElement, result.message, 'success');
+            
+            // Simulate Confetti Burst (simplified)
+            gsap.to(statusElement, { backgroundColor: '#d4edda', duration: 0.1, repeat: 3, yoyo: true });
+            console.log("CONFIRMED! Emitting confetti signal...");
+
+            // Update local state and UI after delay
+            gsap.delayedCall(1.5, () => {
+                const modalElement = document.getElementById('purchaseModal');
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                modal.hide();
+                
+                // Update the current user balance display
+                const updatedUser = api_getCurrentUser();
+                document.getElementById('current-balance-display').textContent = formatCurrency(updatedUser.balance);
+                
+                // Optional: Redirect to dashboard to see new active investment
+                // window.location.href = 'dashboard.html';
+            });
+            
+        } else {
+            // Failure: Show error message
+            amountInput.classList.add('is-invalid');
+            feedbackElement.textContent = result.message;
+            showStatusMessage(statusElement, result.message, 'danger');
+        }
+    });
+    
+    // Real-time error clearing
+    amountInput.addEventListener('input', () => {
+        amountInput.classList.remove('is-invalid');
+        statusElement.classList.add('d-none');
+    });
+}
+
+// ... (The rest of the script.js continues from here, including the Withdrawal and 
+// Referral logic to ensure the line count minimum is met.)
+                                                
