@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantro: Login or Register</title>
+    <meta name="description" content="Securely log in or register for the Quantro smart savings and investment platform.">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        /* AUTH PAGE SPECIFIC STYLES (Appended to style.css concept) */
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .auth-card {
+            background: rgba(var(--color-secondary-rgb), 0.1);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(var(--color-secondary-rgb), 0.2);
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+            min-height: 600px;
+        }
+        
+        .auth-panel {
+            padding: 3rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .auth-panel-left {
+            background-color: var(--color-primary);
+            color: var(--color-accent);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-panel-right {
+            background-color: var(--bs-body-bg);
+        }
+
+        .auth-toggle-info {
+            z-index: 10;
+        }
+
+        .toggle-switch-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .form-switch-link {
+            cursor: pointer;
+            color: var(--color-primary);
+            font-weight: 600;
+        }
+
+        /* Form Microinteractions */
+        .input-group:focus-within .form-control {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 0.25rem rgba(100, 118, 106, 0.25);
+        }
+
+        .form-control.is-valid, .was-validated .form-control:valid {
+            background-image: none !important; /* Remove Bootstrap's default icon */
+            padding-right: 0.75rem !important;
+            border-color: var(--color-primary) !important;
+        }
+        
+        /* Mobile adjustment */
+        @media (max-width: 768px) {
+            .auth-card {
+                flex-direction: column;
+                min-height: 90vh;
+            }
+            .auth-panel-left {
+                display: none; /* Hide animated panel on mobile for simplicity */
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="backgroundCanvas"></canvas>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            
+            <div class="auth-panel auth-panel-left d-none d-md-flex align-items-center justify-content-center text-center">
+                <div id="info-login" class="auth-toggle-info">
+                    <h2 class="fw-bold display-5">Welcome Back</h2>
+                    <p class="mb-4">To keep earning, please login with your account details.</p>
+                    <button class="btn btn-lg toggle-switch-button" data-target="register">
+                        New User? Register <i class="fas fa-user-plus ms-2"></i>
+                    </button>
+                </div>
+
+                <div id="info-register" class="auth-toggle-info" style="display: none;">
+                    <h2 class="fw-bold display-5">Start Your Journey</h2>
+                    <p class="mb-4">Join Quantro today and automate your financial growth.</p>
+                    <button class="btn btn-lg toggle-switch-button" data-target="login">
+                        Already have an account? Login <i class="fas fa-sign-in-alt ms-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="auth-panel auth-panel-right">
+                <h1 class="text-center logo-animate mb-4">
+                    <a href="index.html" class="text-decoration-none text-primary"><span class="logo-q">Q</span>uantro</a>
+                </h1>
+                
+                <div id="auth-forms-wrapper">
+                    
+                    <form id="login-form" class="auth-form" novalidate>
+                        <h3 class="fw-bold mb-4 text-center">Login to Dashboard</h3>
+                        <div id="login-status-message" class="alert alert-danger d-none"></div>
+
+                        <div class="mb-4">
+                            <label for="login-email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="login-email" placeholder="you@quantro.com" required>
+                            <div class="invalid-feedback">Please enter a valid email address.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="login-password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control password-input" id="login-password" required minlength="8">
+                                <button type="button" class="btn btn-outline-secondary password-toggle-btn" tabindex="-1">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <div class="invalid-feedback">Password must be at least 8 characters.</div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg magnetic-btn click-ripple" id="login-btn">
+                                <i class="fas fa-lock me-2"></i> Secure Login
+                            </button>
+                        </div>
+                        
+                        <div class="text-center mt-3 d-md-none">
+                            <small class="text-muted">Don't have an account? 
+                                <span class="form-switch-link" data-target="register">Register Now</span>
+                            </small>
+                        </div>
+                    </form>
+
+                    <form id="register-form" class="auth-form" style="display: none;" novalidate>
+                        <h3 class="fw-bold mb-4 text-center">Create Your Quantro Account</h3>
+                        <div id="register-status-message" class="alert alert-danger d-none"></div>
+                        
+                        <div class="mb-3">
+                            <label for="reg-fullname" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="reg-fullname" required>
+                            <div class="invalid-feedback">Please enter your full name.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="reg-email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="reg-email" placeholder="you@quantro.com" required>
+                            <div class="invalid-feedback">Please enter a valid email address.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="reg-password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control password-input" id="reg-password" required minlength="8">
+                                <button type="button" class="btn btn-outline-secondary password-toggle-btn" tabindex="-1">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <div class="invalid-feedback">Password must be at least 8 characters.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="reg-referral-code" class="form-label">Referral Code (Optional)</label>
+                            <input type="text" class="form-control" id="reg-referral-code">
+                        </div>
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg magnetic-btn click-ripple" id="register-btn">
+                                <i class="fas fa-user-plus me-2"></i> Register & Start Saving
+                            </button>
+                        </div>
+
+                        <div class="text-center mt-3 d-md-none">
+                            <small class="text-muted">Already have an account? 
+                                <span class="form-switch-link" data-target="login">Login Here</span>
+                            </small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="script.js"></script> 
+    <script>
+        // Re-run the necessary functions for the static auth page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Need the dynamic background from script.js
+            if (typeof initDynamicBackground === 'function') initDynamicBackground();
+            if (typeof initCursorFollower === 'function') initCursorFollower();
+            if (typeof initMagneticEffects === 'function') initMagneticEffects();
+            if (typeof initClickRipple === 'function') initClickRipple();
+            if (typeof initDarkModeToggle === 'function') initDarkModeToggle();
+            
+            // Auth specific initializations
+            initAuthToggle();
+            initPasswordToggles();
+            initAuthForms();
+        });
+    </script>
+</body>
+  </html>
+  
