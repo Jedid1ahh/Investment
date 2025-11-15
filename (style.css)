@@ -1,0 +1,305 @@
+/* --- 1. Root Variables & Reset --- */
+:root {
+    /* 60-30-10 Color Scheme */
+    --color-primary: #64766A; /* 60% - Dark Greenish-Gray */
+    --color-secondary: #94A7AE; /* 30% - Muted Blue-Gray */
+    --color-accent: #F4F2F3; /* 10% - Off-White/Light Gray */
+    --color-dark: #121212; /* Custom Dark Background */
+    --color-light: #FFFFFF; /* Pure White for Light Mode */
+    
+    /* Global Styling */
+    --font-family-base: 'Poppins', sans-serif;
+    --border-radius: 1rem;
+    --transition-duration: 0.3s;
+    --nav-height: 4.5rem;
+    
+    /* Neumorphism/Claymorphism/Flat3 Shadows */
+    --shadow-soft: 0.5rem 0.5rem 1rem rgba(0, 0, 0, 0.1), -0.5rem -0.5rem 1rem rgba(255, 255, 255, 0.8);
+    --shadow-flat3: 0 10px 30px rgba(0, 0, 0, 0.15), 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+}
+
+body {
+    font-family: var(--font-family-base);
+    line-height: 1.7;
+    background-color: var(--color-dark);
+    color: var(--color-accent); /* Default text color is accent in dark mode */
+    transition: background-color var(--transition-duration), color var(--transition-duration);
+    overflow-x: hidden; /* Prevent horizontal scroll from magnetic effects */
+}
+
+/* --- 2. Dark/Light Mode Switch (Bootstrap 5 Customization) --- */
+[data-bs-theme="dark"] {
+    --bs-body-bg: var(--color-dark);
+    --bs-body-color: var(--color-accent);
+    --bs-primary: var(--color-primary);
+    --bs-secondary: var(--color-secondary);
+    --bs-heading-color: var(--color-accent);
+    --bs-link-color: var(--color-primary);
+    --bs-link-hover-color: var(--color-secondary);
+    --bs-navbar-bg: rgba(var(--bs-body-bg-rgb), 0.85); /* Frosted effect background */
+    --bs-card-bg: rgba(18, 18, 18, 0.6); /* Glass/Clay base for cards */
+    --bs-card-border-color: rgba(var(--color-primary-rgb), 0.1);
+}
+
+[data-bs-theme="light"] {
+    --bs-body-bg: var(--color-accent);
+    --bs-body-color: var(--color-dark);
+    --bs-primary: var(--color-primary);
+    --bs-secondary: var(--color-secondary);
+    --bs-heading-color: var(--color-dark);
+    --bs-link-color: var(--color-primary);
+    --bs-link-hover-color: var(--color-secondary);
+    --bs-navbar-bg: rgba(255, 255, 255, 0.85);
+    --bs-card-bg: var(--color-light);
+    --bs-card-border-color: rgba(var(--color-secondary-rgb), 0.2);
+}
+
+/* Apply 60-30-10 Colors to Bootstrap Components */
+.btn-primary {
+    --bs-btn-bg: var(--color-primary);
+    --bs-btn-border-color: var(--color-primary);
+    --bs-btn-hover-bg: #4B5A51; /* Darker primary */
+    --bs-btn-hover-border-color: #4B5A51;
+    --bs-btn-active-bg: #353D38;
+    --bs-btn-active-border-color: #353D38;
+}
+
+.btn-outline-secondary {
+    --bs-btn-color: var(--color-secondary);
+    --bs-btn-border-color: var(--color-secondary);
+    --bs-btn-hover-color: var(--color-dark);
+    --bs-btn-hover-bg: var(--color-secondary);
+}
+
+.text-primary { color: var(--color-primary) !important; }
+.text-secondary { color: var(--color-secondary) !important; }
+.bg-secondary-dark { background-color: var(--color-secondary); }
+.text-accent { color: var(--color-accent) !important; }
+
+/* --- 3. Aesthetic Background Effects (Canvas + Noise) --- */
+#backgroundCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    opacity: 0.6; /* Subtle effect */
+    transition: opacity var(--transition-duration);
+}
+
+/* Noise/Grain Overlay */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#n)" opacity="0.08"/></svg>');
+    background-size: 100px 100px;
+}
+
+/* --- 4. Navigation & Header (Frosted Sticky Navbar) --- */
+#main-nav {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.4s ease-in-out;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(var(--color-secondary-rgb), 0.1);
+}
+
+.navbar-brand {
+    font-weight: 900;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+}
+
+.logo-animate .logo-q {
+    display: inline-block;
+    color: var(--color-primary);
+    margin-right: 0.25rem;
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+/* --- 5. Custom Cursor & Magnetic Effects --- */
+.cursor-follower {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    position: fixed;
+    pointer-events: none;
+    opacity: 0.15;
+    z-index: 9999;
+    mix-blend-mode: screen; /* Fun trails effect */
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease, opacity 0.3s ease;
+}
+
+.magnetic-btn, .magnetic-link {
+    display: inline-block;
+    transition: transform 0.2s ease-out;
+}
+
+/* --- 6. Hero Section & Typography Animations --- */
+.hero-section {
+    min-height: 100vh;
+    padding-top: var(--nav-height);
+}
+
+.kinetic-text {
+    overflow: hidden; /* Important for text animations */
+    font-size: clamp(3rem, 10vw, 6rem);
+    line-height: 1;
+}
+
+.word-shuffle {
+    display: inline-block;
+    color: var(--color-primary);
+    /* GSAP will handle the animation */
+}
+
+/* --- 7. Features Section (3D Tilt Cards) --- */
+.feature-card {
+    background-color: var(--bs-card-bg);
+    border: 1px solid var(--bs-card-border-color);
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.27); /* Elastic transition for tilt */
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    position: relative;
+    padding: 2.5rem !important;
+}
+
+/* --- 8. Plans Section (Modern Morphism Cards) --- */
+.plans-section {
+    position: relative;
+}
+
+.horizontal-scroll-container {
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 1rem; /* Space for scroll bar */
+}
+
+.plan-card {
+    min-width: 300px;
+    height: auto;
+    border-radius: var(--border-radius);
+    border: none;
+    padding: 1.5rem;
+    transition: all 0.4s ease-in-out;
+}
+
+/* Glassmorphism */
+.glassmorphism-card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* Claymorphism */
+.claymorphism-card {
+    background: var(--color-secondary);
+    border: none;
+    box-shadow: 
+        -6px -6px 16px rgba(255, 255, 255, 0.1), 
+        6px 6px 16px rgba(0, 0, 0, 0.4), 
+        inset 4px 4px 8px rgba(255, 255, 255, 0.1), 
+        inset -4px -4px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Neumorphism (for light background) */
+[data-bs-theme="light"] .neumorphism-card {
+    background: var(--color-accent);
+    box-shadow: 
+        10px 10px 20px rgba(148, 167, 174, 0.2), 
+        -10px -10px 20px #ffffff;
+}
+[data-bs-theme="dark"] .neumorphism-card {
+    background: #1e1e1e;
+    box-shadow: 
+        8px 8px 15px rgba(0, 0, 0, 0.5), 
+        -8px -8px 15px rgba(40, 40, 40, 0.5);
+}
+
+/* Flat 3.0 */
+.flat3-card {
+    background: var(--bs-card-bg);
+    box-shadow: var(--shadow-flat3);
+    border: 1px solid var(--color-primary);
+}
+
+/* --- 9. Scroll-to-Top Button --- */
+#scrollTopBtn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: none; /* Hidden by default */
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#scrollTopBtn.show {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+}
+
+/* --- 10. Preloader --- */
+.preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-dark);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.6s ease-out, visibility 0.6s ease-out;
+}
+
+.loader-content #quantro-logo-loader {
+    width: 80px;
+    height: 80px;
+}
+
+.loader-content text {
+    fill: var(--color-primary);
+}
+
+/* --- 11. Responsive Adjustments (Mobile First) --- */
+@media (max-width: 767px) {
+    .hero-section {
+        padding-top: calc(var(--nav-height) + 2rem);
+    }
+    .kinetic-text {
+        font-size: 3rem;
+    }
+    .max-w-75 {
+        max-width: 100% !important;
+    }
+}
