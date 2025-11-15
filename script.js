@@ -2279,3 +2279,420 @@ function exportToCSV(transactions) {
 // *** END OF TRANSACTIONS PAGE LOGIC ***
 // =========================================================================
                     
+/* =========================================================================
+   *** CONTINUATION OF script.js - FINAL ADMIN LOGIC ***
+   (This section is added after all previous API simulations.)
+   ========================================================================= */
+
+// --- New Global Helper for Admin Panel ---
+
+/**
+ * Checks if the current user has the 'admin' role.
+ * @returns {boolean}
+ */
+function api_checkAdminRole() {
+    const user = api_getCurrentUser();
+    return user && user.role === 'admin';
+}
+
+/**
+ * Retrieves all relevant simulation data in one call for the Admin Panel.
+ * @returns {object} { users, investments, transactions, bankAccounts }
+ */
+function api_getAllData() {
+    const users = _getUsers();
+    const investments = _getInvestments();
+    const transactions = _getTransactions();
+    const bankAccounts = _getBankAccounts();
+    return { users, investments, transactions, bankAccounts };
+}
+
+/* =========================================================================
+   17. JSON BACKEND SIMULATION - ADMIN API ENDPOINTS
+   ========================================================================= */
+
+/**
+ * Updates a user's details (role, verification, balance) in the simulation.
+ * @param {number} userId
+ * @param {object} updates - { fullname, email, role, is_verified, balance, locked_balance }
+ * @returns {object} { success: boolean, message: string }
+ */
+async function api_updateUser(userId, updates) {
+    if (!api_checkAdminRole()) return { success: false, message: 'Permission denied.' };
+    await new Promise(resolve => setTimeout(resolve, 200)); 
+
+    let users = _getUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    
+    if (userIndex === -1) return { success: false, message: 'User not found.' };
+
+    const user = users[userIndex];
+    
+    // Apply updates safely and format
+    Object.keys(updates).forEach(key => {
+        if (key in user) {
+            if (key === 'balance' || key === 'locked_balance') {
+                user[key] = parseFloat(updates[key]);
+            } else if (key === 'is_verified') {
+                 user[key] = parseInt(updates[key]);
+            } else {
+                user[key] = updates[key];
+            }
+        }
+    });
+
+    _saveUsers(users);
+    return { success: true, message: `User ${userId} updated.` };
+}
+
+/**
+ * Handles the approval or rejection of a pending withdrawal request.
+ * @param {string} txnRef - The reference ID of the withdrawal transaction.
+ * @param {string} action - 'approve' or 'reject'.
+ * @returns {object} { success: boolean, message: string }
+ */
+async function api_manageWithdrawal(txnRef, action) {
+    if (!api_checkAdminRole()) return { success: false, message: 'Permission denied.' };
+    await new Promise(resolve => setTimeout(resolve, 500)); 
+
+    let transactions = _getTransactions();
+    // Find the pending request
+    const txnIndex = transactions.findIndex(t => t.reference === txnRef && t.type === 'withdrawal_request' && t.meta?.status === 'pending');
+    
+    if (txnIndex === -1) return { success: false, message: 'Pending withdrawal not found or already processed.' };
+    
+    const txn = transactions[txnIndex];
+    let users = _getUsers();
+    const userIndex = users.findIndex(u => u.id === txn.user_id);
+    const user = users[userIndex];
+    
+    if (!user) return { success: false, message: 'User associated with transaction not found.' };
+
+    if (action === 'approve') {
+        // Since funds were debited on request, we only update status and log completion
+        txn.meta.status = 'completed';
+        txn.type = 'withdrawal_payout'; 
+        txn.payout_date = new Date().toISOString();
+        
+        // Log final completion transaction
+        api_logTransaction(txn.user_id, 'withdrawal_completed', Math.abs(parseFloat(txn.amount)), `COMPLETED_${txn.reference}`, txn.meta);
+
+        _saveTransactions(transactions);
+        return { success: true, message: `Withdrawal ${txnRef} approved and marked complete.` };
+        
+    } else if (action === 'reject') {
+        // REVERSE the initial debit and log rejection
+        txn.meta.status = 'rejected';
+        txn.type = 'withdrawal_rejected';
+        
+        const refundedAmount = Math.abs(parseFloat(txn.amount));
+        user.balance = parseFloat((user.balance + refundedAmount).toFixed(2));
+        
+        // Log the refund transaction (Credit back to user)
+        api_logTransaction(user.id, 'refund', refundedAmount, `REFUND_${txn.reference}`, { rejected_ref: txn.reference });
+        
+        // Save changes
+        users[userIndex] = user;
+        _saveUsers(users);
+        _saveTransactions(transactions);
+        
+        return { success: false, message: `Withdrawal ${txnRef} rejected. Funds refunded to user wallet.` };
+    }
+    
+    return { success: false, message: 'Invalid action.' };
+}
+
+/**
+ * Manages CRUD operations for investment plans.
+ * @param {string} action - 'create', 'update', 'delete'.
+ * @param {object} planData - Data for the plan.
+ * @returns {object} { success: boolean, message: string }
+ */
+async function api_managePlan(action, planData) {
+    if (!api_checkAdminRole()) return { success: false, message: 'Permission denied.' };
+    await new Promise(resolve => setTimeout(resolve, 200)); 
+    
+    let plans = api_getAllPlans();
+    
+    const formatPlanData = (data) => ({
+        name: data.name,
+        min_amount: parseFloat(data.min_amount),
+        roi_percent: parseFloat(data.roi_percent),
+        duration_days: parseInt(data.duration_days),
+        is_active: data.is_active ? 1 : 0
+    });
+
+    if (action === 'create') {
+        const newId = Math.max(...plans.map(p => p.id), 0) + 1;
+        const newPlan = { ...formatPlanData(planData), id: newId, created_at: new Date().toISOString() };
+        plans.push(newPlan);
+        localStorage.setItem(PLAN_DATA_KEY, JSON.stringify(plans));
+        return { success: true, message: `Plan '${newPlan.name}' created with ID ${newId}.` };
+        
+    } else if (action === 'update') {
+        const index = plans.findIndex(p => p.id === parseInt(planData.id));
+        if (index === -1) return { success: false, message: 'Plan not found.' };
+
+        Object.assign(plans[index], formatPlanData(planData));
+
+        localStorage.setItem(PLAN_DATA_KEY, JSON.stringify(plans));
+        return { success: true, message: `Plan '${plans[index].name}' updated.` };
+        
+    } else if (action === 'delete') {
+        const initialLength = plans.length;
+        plans = plans.filter(p => p.id !== parseInt(planData.id));
+
+        if (plans.length === initialLength) return { success: false, message: 'Plan not found.' };
+
+        localStorage.setItem(PLAN_DATA_KEY, JSON.stringify(plans));
+        return { success: true, message: `Plan ID ${planData.id} deleted.` };
+    }
+
+    return { success: false, message: 'Invalid plan management action.' };
+}
+
+
+/* =========================================================================
+   18. ADMIN UI RENDERING & EVENT HANDLERS
+   ========================================================================= */
+
+/**
+ * Main initialization function for the Admin Dashboard.
+ */
+function initAdminDashboard() {
+    const { users, transactions, bankAccounts } = api_getAllData();
+    
+    // 1. Render all panels
+    renderUsersPanel(users);
+    renderPlansPanel(api_getAllPlans());
+    renderApprovalsPanel(transactions, users, bankAccounts);
+    
+    // 2. Setup event listeners
+    setupPlanManagementForm();
+    setupUserManagementActions();
+    setupWithdrawalApprovalActions();
+}
+
+/**
+ * Renders the Users Management Panel.
+ * @param {Array} users
+ */
+function renderUsersPanel(users) {
+    const tbody = document.getElementById('users-table-body');
+    document.getElementById('user-count').textContent = users.length;
+    tbody.innerHTML = '';
+    
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${user.id}</td>
+            <td><strong>${user.fullname}</strong><br><small class="text-muted">${user.email}</small></td>
+            <td><span class="badge bg-${user.role === 'admin' ? 'danger' : 'success'}">${user.role.toUpperCase()}</span></td>
+            <td>${formatCurrency(user.balance)}</td>
+            <td>${formatCurrency(user.locked_balance)}</td>
+            <td><span class="badge bg-${user.is_verified ? 'primary' : 'secondary'}">${user.is_verified ? 'Verified' : 'Pending'}</span></td>
+            <td>
+                <button class="btn btn-sm btn-warning me-2 edit-user-btn" data-user-id="${user.id}">Edit</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+/**
+ * Renders the Withdrawal Approvals Panel.
+ * @param {Array} transactions
+ * @param {Array} users
+ * @param {Array} bankAccounts
+ */
+function renderApprovalsPanel(transactions, users, bankAccounts) {
+    const tbody = document.getElementById('approvals-table-body');
+    const pendingRequests = transactions.filter(t => t.type === 'withdrawal_request' && t.meta?.status === 'pending');
+    tbody.innerHTML = '';
+
+    document.getElementById('pending-count').textContent = pendingRequests.length;
+    
+    if (pendingRequests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No pending requests found.</td></tr>';
+        return;
+    }
+    
+    pendingRequests.forEach(txn => {
+        const user = users.find(u => u.id === txn.user_id);
+        const account = bankAccounts.find(acc => acc.id === txn.meta?.bank_account_id);
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${txn.reference.substring(0, 10)}...</td>
+            <td>${txn.user_id} (${user ? user.fullname : 'N/A'})</td>
+            <td><strong>${formatCurrency(Math.abs(txn.amount))}</strong></td>
+            <td>
+                ${account ? `${account.bank_name}<br><small>${account.account_number}</small>` : 'N/A'}
+            </td>
+            <td>${new Date(txn.created_at).toLocaleString()}</td>
+            <td>
+                <button class="btn btn-sm btn-success me-2 approve-btn" data-ref="${txn.reference}">Approve</button>
+                <button class="btn btn-sm btn-danger reject-btn" data-ref="${txn.reference}">Reject</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+/**
+ * Renders the Investment Plans Management Panel.
+ * @param {Array} plans
+ */
+function renderPlansPanel(plans) {
+    const tbody = document.getElementById('plans-table-body');
+    tbody.innerHTML = '';
+    
+    if (plans.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No plans defined. Use the form above to create one.</td></tr>';
+        return;
+    }
+
+    plans.forEach(plan => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${plan.id}</td>
+            <td>${plan.name}</td>
+            <td>${formatCurrency(plan.min_amount)}</td>
+            <td>${plan.roi_percent}%</td>
+            <td>${plan.duration_days} days</td>
+            <td><span class="badge bg-${plan.is_active ? 'success' : 'secondary'}">${plan.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+                <button class="btn btn-sm btn-warning me-2 edit-plan-btn" data-plan-id="${plan.id}">Edit</button>
+                <button class="btn btn-sm btn-danger delete-plan-btn" data-plan-id="${plan.id}">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+
+/**
+ * Sets up event listeners for Plan Management (CRUD).
+ */
+function setupPlanManagementForm() {
+    const form = document.getElementById('plan-management-form');
+    const statusEl = document.getElementById('plan-management-status');
+    const submitBtn = document.getElementById('plan-submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        statusEl.classList.add('d-none');
+        
+        const planData = {
+            id: document.getElementById('plan-id').value,
+            name: document.getElementById('plan-name').value,
+            min_amount: document.getElementById('plan-min').value,
+            roi_percent: document.getElementById('plan-roi').value,
+            duration_days: document.getElementById('plan-duration').value,
+            is_active: document.getElementById('plan-active').checked
+        };
+        
+        const action = planData.id ? 'update' : 'create';
+        submitBtn.disabled = true;
+
+        const result = await api_managePlan(action, planData);
+        submitBtn.disabled = false;
+        
+        if (result.success) {
+            showStatusMessage(statusEl, result.message, 'success');
+            form.reset();
+            document.getElementById('plan-id').value = '';
+            submitBtn.textContent = 'Create Plan';
+            renderPlansPanel(api_getAllPlans());
+        } else {
+            showStatusMessage(statusEl, result.message, 'danger');
+        }
+    });
+
+    // Edit button click handler
+    document.getElementById('plans-table-body').addEventListener('click', (e) => {
+        if (e.target.classList.contains('edit-plan-btn')) {
+            const planId = parseInt(e.target.dataset.planId);
+            const plan = api_getAllPlans().find(p => p.id === planId);
+            if (plan) {
+                document.getElementById('plan-id').value = plan.id;
+                document.getElementById('plan-name').value = plan.name;
+                document.getElementById('plan-min').value = plan.min_amount;
+                document.getElementById('plan-roi').value = plan.roi_percent;
+                document.getElementById('plan-duration').value = plan.duration_days;
+                document.getElementById('plan-active').checked = plan.is_active === 1;
+                submitBtn.textContent = 'Update Plan';
+            }
+        }
+        if (e.target.classList.contains('delete-plan-btn')) {
+             if (confirm("Are you sure you want to delete this plan?")) {
+                 api_managePlan('delete', { id: e.target.dataset.planId }).then(result => {
+                     showStatusMessage(statusEl, result.message, result.success ? 'success' : 'danger');
+                     renderPlansPanel(api_getAllPlans());
+                 });
+             }
+        }
+    });
+}
+
+/**
+ * Sets up event listeners for Withdrawal Approvals.
+ */
+function setupWithdrawalApprovalActions() {
+    const tbody = document.getElementById('approvals-table-body');
+    const statusEl = document.getElementById('approval-status-message');
+
+    tbody.addEventListener('click', async (e) => {
+        const target = e.target;
+        if (target.classList.contains('approve-btn') || target.classList.contains('reject-btn')) {
+            const txnRef = target.dataset.ref;
+            const action = target.classList.contains('approve-btn') ? 'approve' : 'reject';
+            
+            target.disabled = true;
+            target.textContent = 'Processing...';
+
+            const result = await api_manageWithdrawal(txnRef, action);
+            
+            // Reload the table and show status
+            const { users, transactions, bankAccounts } = api_getAllData();
+            renderApprovalsPanel(transactions, users, bankAccounts);
+
+            showStatusMessage(statusEl, result.message, result.success ? 'success' : 'danger');
+        }
+    });
+}
+
+/**
+ * Sets up event listeners for User Management (Edit).
+ */
+function setupUserManagementActions() {
+    const tbody = document.getElementById('users-table-body');
+
+    tbody.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('edit-user-btn')) {
+            const userId = parseInt(e.target.dataset.userId);
+            const users = _getUsers();
+            const user = users.find(u => u.id === userId);
+            
+            if (!user) return;
+
+            // Simple prompt for editing (in a real app, this would be a modal form)
+            const newBalance = prompt(`Editing User ${user.id}: ${user.fullname}\nCurrent Balance: ${user.balance}\nEnter NEW available balance:`, user.balance);
+            
+            if (newBalance !== null && !isNaN(newBalance)) {
+                const result = await api_updateUser(userId, { balance: newBalance });
+                if (result.success) {
+                    renderUsersPanel(_getUsers());
+                    alert(result.message);
+                } else {
+                    alert(result.message);
+                }
+            }
+        }
+    });
+}
+
+// =========================================================================
+// *** END OF QUANTRO FRONTEND BLUEPRINT & JSON SIMULATION ***
+// =========================================================================
+                      
