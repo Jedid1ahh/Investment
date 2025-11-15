@@ -970,3 +970,347 @@ function api_processROI_Cron() {
 }
 
 // ... (Numerous other detailed JSON simulation functions follow here...)                                                      
+
+/* =========================================================================
+   *** CONTINUATION OF script.js - JSON BACKEND & CORE LOGIC ***
+   ========================================================================= */
+
+// --- New Global Constants for Time & Data Simulation ---
+const DAY_MS = 24 * 60 * 60 * 1000;
+const SIMULATION_SPEED = 5; // Factor to speed up maturity calculation (e.g., 1 day = 5 ticks)
+
+/* =========================================================================
+   9. JSON BACKEND SIMULATION - FINANCIAL SERVICES & DATA
+   ========================================================================= */
+
+/**
+ * Utility function to retrieve all investments.
+ * @returns {Array}
+ */
+function _getInvestments() {
+    return JSON.parse(localStorage.getItem(INV_DATA_KEY) || '[]');
+}
+
+/**
+ * Utility function to retrieve all transactions.
+ * @returns {Array}
+ */
+function _getTransactions() {
+    return JSON.parse(localStorage.getItem(TXN_DATA_KEY) || '[]');
+}
+
+/**
+ * Utility function to save investments.
+ * @param {Array} investments
+ */
+function _saveInvestments(investments) {
+    localStorage.setItem(INV_DATA_KEY, JSON.stringify(investments));
+}
+
+/**
+ * Utility function to save transactions.
+ * @param {Array} transactions
+ */
+function _saveTransactions(transactions) {
+    localStorage.setItem(TXN_DATA_KEY, JSON.stringify(transactions));
+}
+
+/**
+ * Simulates logging a transaction.
+ * @param {number} userId
+ * @param {string} type - 'deposit','withdrawal','payout','purchase'
+ * @param {number} amount
+ * @param {string} reference
+ * @param {object} [meta=null]
+ */
+function api_logTransaction(userId, type, amount, reference, meta = null) {
+    const transactions = _getTransactions();
+    const newTxn = {
+        id: transactions.length + 1,
+        user_id: userId,
+        type: type,
+        amount: parseFloat(amount).toFixed(2),
+        reference: reference,
+        meta: meta,
+        created_at: new Date().toISOString()
+    };
+    transactions.push(newTxn);
+    _saveTransactions(transactions);
+}
+
+/**
+ * Simulates the CRON job: checks for matured investments and executes payouts.
+ * This runs on every dashboard load for simulation purposes.
+ */
+function api_processROI_Cron() {
+    console.log("CRON JOB: Starting ROI/Maturity Processing...");
+    let users = _getUsers();
+    let investments = _getInvestments();
+    let payoutsProcessed = 0;
+
+    const currentTime = Date.now();
+
+    investments.forEach(inv => {
+        if (inv.status === 'running') {
+            const endDate = new Date(inv.end_date).getTime();
+
+            // Check if the investment has matured (end date is in the past)
+            if (currentTime >= endDate) {
+                const user = users.find(u => u.id === inv.user_id);
+                if (user) {
+                    // 1. Calculate Total Payout (Principal + ROI)
+                    const totalPayout = inv.principal + inv.roi_amount;
+                    
+                    // 2. Debit the locked principal and credit the total payout
+                    user.locked_balance -= inv.principal;
+                    user.balance += totalPayout;
+                    
+                    // Ensure locked balance doesn't go negative due to floating point math
+                    user.locked_balance = Math.max(0, user.locked_balance);
+                    
+                    // 3. Update investment status
+                    inv.status = 'matured';
+                    inv.payout_date = new Date().toISOString();
+                    payoutsProcessed++;
+
+                    // 4. Log the transaction (Payout)
+                    api_logTransaction(user.id, 'payout', totalPayout, `PAYOUT_${inv.id}`, {
+                        investment_id: inv.id,
+                        roi: inv.roi_amount,
+                        principal: inv.principal
+                    });
+                    
+                    console.log(`CRON: Payout for Inv #${inv.id} (${inv.principal} + ${inv.roi_amount}) credited to user ${user.id}.`);
+                }
+            }
+        }
+    });
+
+    // Save updated users and investments
+    _saveUsers(users);
+    _saveInvestments(investments);
+    console.log(`CRON JOB: Finished. ${payoutsProcessed} payouts processed.`);
+}
+
+/**
+ * Calculates the total ROI earned by a user across all completed investments.
+ * @param {number} userId
+ * @returns {number} Total ROI amount
+ */
+function api_calculateTotalRoiEarned(userId) {
+    const transactions = _getTransactions().filter(t => 
+        t.user_id === userId && t.type === 'payout' && t.meta && t.meta.roi
+    );
+    
+    return transactions.reduce((sum, txn) => sum + parseFloat(txn.meta.roi), 0);
+}
+
+
+/* =========================================================================
+   10. DASHBOARD SPECIFIC LOGIC (dashboard.html)
+   ========================================================================= */
+
+/**
+ * Initializes the dashboard view with user data and statistics.
+ * @param {object} currentUser
+ */
+function initDashboard(currentUser) {
+    // 1. Run the Cron Job (Simulate daily processing on login/load)
+    api_processROI_Cron();
+    
+    // Refresh user data after cron job
+    currentUser = api_getCurrentUser(); 
+    if (!currentUser) return; // Should not happen after cron, but safety check
+
+    // 2. Update Welcome Message
+    document.getElementById('user-fullname').textContent = currentUser.fullname;
+
+    // 3. Load Financial Stats
+    loadFinancialStats(currentUser);
+
+    // 4. Load Active Investments
+    loadActiveInvestments(currentUser.id);
+    
+    // 5. Initialize Tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+}
+
+/**
+ * Loads the main stat cards and applies the counter animation.
+ * @param {object} user
+ */
+function loadFinancialStats(user) {
+    const totalRoi = api_calculateTotalRoiEarned(user.id);
+    
+    const stats = [
+        { id: 'wallet-balance', value: user.balance },
+        { id: 'locked-balance', value: user.locked_balance },
+        { id: 'total-roi-earned', value: totalRoi }
+    ];
+
+    stats.forEach(stat => {
+        const element = document.getElementById(stat.id);
+        const targetValue = parseFloat(stat.value);
+        
+        // Counter Up Effect (Microinteraction)
+        gsap.fromTo(element, 
+            { innerHTML: '₦0.00' },
+            {
+                duration: 1.5,
+                innerHTML: targetValue,
+                snap: 'innerHTML', // Snap to integer during animation
+                ease: CONFIG.EASE,
+                onUpdate: function() {
+                    // Format number as currency (Nigerian Naira)
+                    element.innerHTML = '₦' + parseFloat(element.innerHTML).toLocaleString('en-NG', { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                    });
+                }
+            }
+        );
+    });
+}
+
+/**
+ * Loads and displays the user's active investments.
+ * @param {number} userId
+ */
+function loadActiveInvestments(userId) {
+    const plans = JSON.parse(localStorage.getItem(PLAN_DATA_KEY) || '[]');
+    const investments = _getInvestments().filter(inv => inv.user_id === userId);
+    const tbody = document.getElementById('active-investments-body');
+    tbody.innerHTML = ''; // Clear existing rows
+    
+    const activeInv = investments.filter(inv => inv.status === 'running');
+    
+    if (activeInv.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No active investments found.</td></tr>';
+        return;
+    }
+
+    activeInv.forEach(inv => {
+        const plan = plans.find(p => p.id === inv.plan_id);
+        if (!plan) return;
+
+        const startDate = new Date(inv.start_date).getTime();
+        const endDate = new Date(inv.end_date).getTime();
+        const currentTime = Date.now();
+        const totalDuration = endDate - startDate;
+        const elapsedDuration = currentTime - startDate;
+        
+        let progressPercent = 0;
+        if (totalDuration > 0) {
+            progressPercent = Math.min(100, Math.round((elapsedDuration / totalDuration) * 100));
+        }
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong class="text-primary">${plan.name}</strong></td>
+            <td>₦${inv.principal.toLocaleString('en-NG')}</td>
+            <td>${plan.roi_percent}% over ${plan.duration_days} days</td>
+            <td>${new Date(inv.start_date).toLocaleDateString()}</td>
+            <td>${new Date(inv.end_date).toLocaleDateString()}</td>
+            <td>
+                <div class="progress" role="progressbar" style="height: 15px;">
+                    <div class="progress-bar bg-success" style="width: ${progressPercent}%; animation: progress-bar-slide 1s ease-out;">
+                        ${progressPercent}%
+                    </div>
+                </div>
+            </td>
+            <td><span class="badge bg-warning text-dark">Running</span></td>
+        `;
+        tbody.appendChild(row);
+        
+        // Add CSS for the progress bar animation (microinteraction)
+        if (!document.getElementById('progress-animation-style')) {
+            const style = document.createElement('style');
+            style.id = 'progress-animation-style';
+            style.innerHTML = `@keyframes progress-bar-slide { 0% { width: 0; } 100% { width: var(--bs-progress-bar-width); } }`;
+            document.head.appendChild(style);
+        }
+    });
+
+    // Notify user of next cron run (simulated)
+    document.getElementById('investment-alert').textContent = `Your investment ROI is calculated upon plan maturity. The system runs a maturity check on every dashboard load.`;
+    document.getElementById('investment-alert').classList.remove('d-none');
+}
+
+/* =========================================================================
+   11. JSON BACKEND SIMULATION - PLAN PURCHASES (For next page setup)
+   ========================================================================= */
+
+/**
+ * Simulates the purchasing of an investment plan.
+ * @param {number} userId
+ * @param {number} planId
+ * @param {number} amount
+ * @returns {object} { success: boolean, message: string }
+ */
+async function api_buyPlan(userId, planId, amount) {
+    await new Promise(resolve => setTimeout(resolve, 500)); 
+    let users = _getUsers();
+    let investments = _getInvestments();
+    const plans = JSON.parse(localStorage.getItem(PLAN_DATA_KEY) || '[]');
+    
+    const userIndex = users.findIndex(u => u.id === userId);
+    const user = users[userIndex];
+    const plan = plans.find(p => p.id === planId);
+    
+    if (!user || !plan) {
+        return { success: false, message: 'Invalid user or plan.' };
+    }
+    
+    const principal = parseFloat(amount);
+    
+    if (principal < plan.min_amount) {
+        return { success: false, message: `Minimum investment for ${plan.name} is ₦${plan.min_amount.toLocaleString()}.` };
+    }
+    
+    if (user.balance < principal) {
+        return { success: false, message: 'Insufficient funds in wallet. Please deposit first.' };
+    }
+    
+    // 1. Calculate ROI and Dates
+    const roiAmount = (principal * plan.roi_percent) / 100;
+    const startDate = new Date();
+    const endDate = new Date(startDate.getTime() + plan.duration_days * DAY_MS);
+
+    // 2. Update Wallet (Debit balance, increase locked_balance)
+    user.balance = parseFloat((user.balance - principal).toFixed(2));
+    user.locked_balance = parseFloat((user.locked_balance + principal).toFixed(2));
+
+    // 3. Create Investment Record
+    const newInvId = investments.length + 1;
+    const newInvestment = {
+        id: newInvId,
+        user_id: userId,
+        plan_id: planId,
+        principal: principal,
+        roi_amount: roiAmount,
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+        status: 'running',
+        created_at: startDate.toISOString()
+    };
+    investments.push(newInvestment);
+
+    // 4. Log Transaction
+    api_logTransaction(userId, 'purchase', principal, `PLAN_PURCHASE_${newInvId}`, {
+        plan_id: planId,
+        roi_percent: plan.roi_percent
+    });
+    
+    // 5. Save all changes
+    users[userIndex] = user;
+    _saveUsers(users);
+    _saveInvestments(investments);
+
+    return { success: true, message: `${plan.name} purchased! Principal of ₦${principal.toLocaleString()} is now locked and earning.`, investment: newInvestment };
+}
+
+// ... (Other essential simulation functions for Withdrawals, Referral tracking, 
+// and Admin management will follow here in the next steps to complete the required 
+// code complexity and lines count.)
+       
