@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantro: Admin Control Panel</title>
+    <meta name="description" content="Administrator dashboard for managing users, investments, and withdrawal approvals on Quantro.">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        /* ADMIN PAGE SPECIFIC STYLES */
+        
+        main {
+            padding-top: var(--nav-height);
+            min-height: 100vh;
+        }
+
+        .admin-header {
+            border-bottom: 3px solid #ffc107; /* Admin highlight color */
+            padding-bottom: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .admin-card {
+            background-color: var(--bs-card-bg);
+            border: 1px solid var(--bs-card-border-color);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            margin-bottom: 2rem;
+        }
+        
+        .nav-tabs .nav-link {
+            color: var(--color-secondary);
+            border-color: rgba(var(--color-secondary-rgb), 0.1);
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--color-primary);
+            font-weight: bold;
+            border-bottom-color: var(--color-primary);
+        }
+        
+        .table-admin {
+            min-width: 1200px;
+        }
+
+        .table-admin td, .table-admin th {
+            vertical-align: middle;
+        }
+        
+        /* Restricted Access Overlay */
+        #access-denied-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="access-denied-overlay">
+        <h1 class="display-1 text-danger mb-4"><i class="fas fa-exclamation-triangle"></i></h1>
+        <h2 class="fw-bold">ACCESS DENIED</h2>
+        <p class="lead mb-4">You must be logged in as an Administrator to view this page.</p>
+        <a href="auth.html" class="btn btn-warning btn-lg">Go to Login Page</a>
+    </div>
+
+    <canvas id="backgroundCanvas"></canvas>
+
+    <nav class="navbar navbar-expand-lg sticky-top" id="main-nav">
+        <div class="container-fluid container-xxl">
+            <a class="navbar-brand logo-animate" href="index.html">
+                <span class="logo-q">Q</span>uantro <span class="badge bg-warning text-dark ms-2">ADMIN</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNav" aria-controls="dashboardNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="dashboardNav">
+                <ul class="navbar-nav align-items-lg-center">
+                    <li class="nav-item"><a class="nav-link" href="dashboard.html">User Panel</a></li>
+                    <li class="nav-item mx-lg-3">
+                        <button class="btn btn-sm btn-outline-danger magnetic-btn click-ripple" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <div class="form-check form-switch ms-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch">
+                            <label class="form-check-label" for="darkModeSwitch"><i class="fas fa-moon"></i></label>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-fluid container-xxl py-5">
+        
+        <header class="admin-header">
+            <h1 class="display-5 fw-bold"><i class="fas fa-users-cog text-warning me-2"></i> Quantro Admin Panel</h1>
+            <p class="lead">System-level management of all platform operations and data.</p>
+        </header>
+
+        <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation"><button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-panel" type="button" role="tab"><i class="fas fa-user-friends me-1"></i> Users Management</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="approvals-tab" data-bs-toggle="tab" data-bs-target="#approvals-panel" type="button" role="tab"><i class="fas fa-check-double me-1"></i> Withdrawal Approvals</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="plans-tab" data-bs-toggle="tab" data-bs-target="#plans-panel" type="button" role="tab"><i class="fas fa-gem me-1"></i> Investment Plans</button></li>
+        </ul>
+
+        <div class="tab-content">
+            
+            <div class="tab-pane fade show active" id="users-panel" role="tabpanel">
+                <div class="admin-card">
+                    <h4 class="fw-bold mb-4">All Registered Users (<span id="user-count">0</span>)</h4>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover text-light table-admin">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name/Email</th>
+                                    <th>Role</th>
+                                    <th>Balance</th>
+                                    <th>Locked</th>
+                                    <th>Verified</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <tr><td colspan="7" class="text-center text-muted">Loading user data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="approvals-panel" role="tabpanel">
+                 <div class="admin-card">
+                    <h4 class="fw-bold mb-4">Pending Withdrawal Requests (<span id="pending-count">0</span>)</h4>
+                    <div id="approval-status-message" class="alert d-none"></div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover text-light table-admin">
+                            <thead>
+                                <tr>
+                                    <th>Txn Ref</th>
+                                    <th>User ID</th>
+                                    <th>Amount</th>
+                                    <th>Account Details</th>
+                                    <th>Date Requested</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approvals-table-body">
+                                <tr><td colspan="6" class="text-center text-muted">No pending requests found.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="plans-panel" role="tabpanel">
+                 <div class="admin-card mb-5">
+                    <h4 class="fw-bold mb-4">Plans Management (CRUD)</h4>
+                    <form id="plan-management-form" class="row g-3">
+                        <input type="hidden" id="plan-id">
+                        <div class="col-md-3"><label for="plan-name" class="form-label">Name</label><input type="text" class="form-control" id="plan-name" required></div>
+                        <div class="col-md-2"><label for="plan-min" class="form-label">Min Amount (₦)</label><input type="number" class="form-control" id="plan-min" required></div>
+                        <div class="col-md-2"><label for="plan-roi" class="form-label">ROI (%)</label><input type="number" class="form-control" id="plan-roi" required></div>
+                        <div class="col-md-2"><label for="plan-duration" class="form-label">Duration (Days)</label><input type="number" class="form-control" id="plan-duration" required></div>
+                        <div class="col-md-1 d-flex align-items-end"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="plan-active" checked><label class="form-check-label" for="plan-active">Active</label></div></div>
+                        <div class="col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-primary w-100" id="plan-submit-btn">Create Plan</button></div>
+                        <div id="plan-management-status" class="col-12 alert d-none mt-3"></div>
+                    </form>
+                </div>
+                
+                <div class="admin-card">
+                    <h4 class="fw-bold mb-4">Current Active Plans</h4>
+                    <div class="table-responsive">
+                         <table class="table table-striped table-hover text-light">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Min Amount</th>
+                                    <th>ROI %</th>
+                                    <th>Duration</th>
+                                    <th>Active</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plans-table-body">
+                                <tr><td colspan="7" class="text-center text-muted">Loading plans...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="script.js"></script> 
+    <script>
+        // Admin Access Check and Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!api_checkAdminRole()) {
+                document.getElementById('access-denied-overlay').style.display = 'flex';
+                return;
+            }
+
+            // Initialize general utilities
+            if (typeof initDynamicBackground === 'function') initDynamicBackground();
+            if (typeof initCursorFollower === 'function') initCursorFollower();
+            if (typeof initMagneticEffects === 'function') initMagneticEffects();
+            if (typeof initDarkModeToggle === 'function') initDarkModeToggle();
+            
+            // Admin specific initializations
+            initAdminDashboard();
+            document.getElementById('logout-btn').addEventListener('click', api_logoutUser);
+        });
+    </script>
+</body>
+      </html>
+              
