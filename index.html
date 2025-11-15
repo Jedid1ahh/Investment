@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantro: Future of Smart Savings & Analytics</title>
+    <meta name="description" content="Quantro is a futuristic savings platform for smart financial data analytics and high-ROI investments in Nigeria.">
+    <meta name="keywords" content="savings, investment, financial analytics, ROI, Nigeria, Quantro, web platform">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="preloader" class="preloader">
+        <div class="loader-content">
+            <svg id="quantro-logo-loader" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="45" fill="transparent" stroke="#F4F2F3" stroke-width="4" stroke-dasharray="282.7" stroke-dashoffset="0"></circle>
+                <text x="50" y="55" font-family="Poppins, sans-serif" font-size="18" fill="#F4F2F3" text-anchor="middle">Q</text>
+            </svg>
+        </div>
+    </div>
+
+    <canvas id="backgroundCanvas"></canvas>
+
+    <nav class="navbar navbar-expand-lg sticky-top" id="main-nav">
+        <div class="container-fluid container-xxl">
+            <a class="navbar-brand logo-animate" href="index.html">
+                <span class="logo-q">Q</span>uantro
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-lg-center">
+                    <li class="nav-item"><a class="nav-link active" href="#hero">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#plans">Plans</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                    <li class="nav-item d-lg-none"><a class="nav-link" href="auth.html">Login / Register</a></li>
+                    <li class="nav-item mx-lg-3">
+                        <a href="auth.html" class="btn btn-primary magnetic-btn" data-magnetic>
+                            <i class="fas fa-sign-in-alt"></i> Get Started
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <div class="form-check form-switch ms-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch">
+                            <label class="form-check-label" for="darkModeSwitch"><i class="fas fa-moon"></i></label>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main data-lenis-prevent>
+        
+        <section id="hero" class="hero-section d-flex align-items-center text-center">
+            <div class="container container-xxl">
+                <h1 class="display-1 fw-bold mb-4 kinetic-text" data-scroll-speed="1.2">
+                    <span class="text-fill-on-scroll">Your Financial Future,</span> <br> 
+                    <span class="text-accent word-shuffle">Automated.</span>
+                </h1>
+                <p class="lead mb-5 text-muted max-w-75 mx-auto">
+                    **Quantro** is the next-generation platform for intelligent savings and high-yield investment analytics, designed for transparency and security in the Nigerian market.
+                </p>
+                <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                    <a href="auth.html" class="btn btn-primary btn-lg px-4 me-sm-3 click-ripple magnetic-btn" data-magnetic>
+                        Start Saving Now <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                    <button class="btn btn-outline-secondary btn-lg px-4 click-ripple">
+                        <i class="fas fa-chart-line me-2"></i> View Analytics
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features-section py-5 parallax-container">
+            <div class="container container-xxl py-5">
+                <h2 class="text-center display-4 fw-bold mb-5 scroll-reveal-header">
+                    <i class="fas fa-rocket text-primary me-2"></i> Features Engineered for **Success**
+                </h2>
+                <div class="row g-4 mouse-parallax-group">
+                    
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="feature-card tilt-on-hover p-4 shadow-lg rounded-4 h-100" data-depth="0.1">
+                            <i class="fas fa-wallet fa-3x mb-3 text-primary"></i>
+                            <h3 class="fw-bold">Secure Digital Wallet</h3>
+                            <p class="text-muted">Instantly fund your dashboard via **Paystack/Flutterwave** and track your balance, locked funds, and withdrawal history with total clarity.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="feature-card tilt-on-hover p-4 shadow-lg rounded-4 h-100" data-depth="0.2">
+                            <i class="fas fa-hand-holding-usd fa-3x mb-3 text-primary"></i>
+                            <h3 class="fw-bold">Automated ROI Payouts</h3>
+                            <p class="text-muted">Invest in diverse plans and let our **Cron job simulation** automatically credit returns to your wallet upon plan maturation. Effortless growth.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="feature-card tilt-on-hover p-4 shadow-lg rounded-4 h-100" data-depth="0.15">
+                            <i class="fas fa-chart-area fa-3x mb-3 text-primary"></i>
+                            <h3 class="fw-bold">Real-Time Data Analytics</h3>
+                            <p class="text-muted">Get comprehensive visual data on your investment growth, transaction patterns, and referral performance via our intelligent dashboard.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="feature-card tilt-on-hover p-4 shadow-lg rounded-4 h-100" data-depth="0.25">
+                            <i class="fas fa-shield-alt fa-3x mb-3 text-primary"></i>
+                            <h3 class="fw-bold">Security & Compliance</h3>
+                            <p class="text-muted">Built with **KYC** standards and robust security measures (PDO, Hashing, 2FA setup) to ensure a safe and compliant environment.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="feature-card tilt-on-hover p-4 shadow-lg rounded-4 h-100" data-depth="0.1">
+                            <i class="fas fa-user-friends fa-3x mb-3 text-primary"></i>
+                            <h3 class="fw-bold">Powerful Referral System</h3>
+                            <p class="text-muted">Share your unique link and earn commissions. Watch your network and earnings grow with transparent tracking on your dedicated page.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="feature-card tilt-on-hover p-4 shadow-lg rounded-4 h-100" data-depth="0.2">
+                            <i class="fas fa-mobile-alt fa-3x mb-3 text-primary"></i>
+                            <h3 class="fw-bold">Mobile-First Responsiveness</h3>
+                            <p class="text-muted">Access your financial dashboard seamlessly on any device, from a small phone to a large desktop, thanks to our flexible Bootstrap 5 structure.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <section id="plans" class="plans-section py-5 bg-secondary-dark">
+            <div class="container container-xxl">
+                <h2 class="text-center display-4 fw-bold mb-5 text-light scroll-reveal-header">
+                    Choose Your **Quantro** Plan
+                </h2>
+                <div class="horizontal-scroll-container">
+                    <div class="plan-card-wrapper d-flex gap-4 p-3">
+                        <div class="card plan-card flex-shrink-0 claymorphism-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-medal fa-3x text-bronze mb-3"></i>
+                                <h5 class="card-title fw-bold">Bronze Savings</h5>
+                                <p class="card-text lead">**5%** ROI in **30 Days**</p>
+                                <p class="text-muted">Min Deposit: **₦10,000**</p>
+                                <a href="auth.html" class="btn btn-outline-primary magnetic-btn mt-3">Explore Now</a>
+                            </div>
+                        </div>
+                        <div class="card plan-card flex-shrink-0 glassmorphism-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-trophy fa-3x text-silver mb-3"></i>
+                                <h5 class="card-title fw-bold">Silver Builder</h5>
+                                <p class="card-text lead">**10%** ROI in **60 Days**</p>
+                                <p class="text-muted">Min Deposit: **₦50,000**</p>
+                                <a href="auth.html" class="btn btn-primary magnetic-btn mt-3">Get Started</a>
+                            </div>
+                        </div>
+                        <div class="card plan-card flex-shrink-0 neumorphism-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-crown fa-3x text-gold mb-3"></i>
+                                <h5 class="card-title fw-bold">Gold Elite</h5>
+                                <p class="card-text lead">**15%** ROI in **90 Days**</p>
+                                <p class="text-muted">Min Deposit: **₦100,000**</p>
+                                <a href="auth.html" class="btn btn-outline-primary magnetic-btn mt-3">Invest Big</a>
+                            </div>
+                        </div>
+                        <div class="card plan-card flex-shrink-0 flat3-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-cogs fa-3x text-primary mb-3"></i>
+                                <h5 class="card-title fw-bold">Custom Analytics</h5>
+                                <p class="card-text lead">**Variable** ROI & Term</p>
+                                <p class="text-muted">By special invitation only.</p>
+                                <a href="auth.html" class="btn btn-outline-primary magnetic-btn mt-3">Contact Team</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer id="contact" class="footer py-5">
+            <div class="container container-xxl">
+                <div class="row">
+                    <div class="col-lg-4 mb-4">
+                        <h5 class="logo-animate">Quantro</h5>
+                        <p class="text-muted">Intelligent savings for the future.</p>
+                        <p class="text-muted">&copy; 2025 Quantro. All rights reserved.</p>
+                    </div>
+                    <div class="col-lg-2 col-md-4 mb-4">
+                        <h6 class="fw-bold">Quick Links</h6>
+                        <ul class="list-unstyled">
+                            <li><a href="#hero" class="text-muted text-decoration-none">Home</a></li>
+                            <li><a href="#features" class="text-muted text-decoration-none">Features</a></li>
+                            <li><a href="auth.html" class="text-muted text-decoration-none">Login</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-lg-2 col-md-4 mb-4">
+                        <h6 class="fw-bold">Legal</h6>
+                        <ul class="list-unstyled">
+                            <li><a href="#" class="text-muted text-decoration-none">T&Cs</a></li>
+                            <li><a href="#" class="text-muted text-decoration-none">Risk Disclosure</a></li>
+                            <li><a href="#" class="text-muted text-decoration-none">Privacy Policy</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-lg-4 col-md-4 mb-4">
+                        <h6 class="fw-bold">Connect</h6>
+                        <a href="#" class="text-muted me-3"><i class="fab fa-twitter fa-lg"></i></a>
+                        <a href="#" class="text-muted me-3"><i class="fab fa-linkedin fa-lg"></i></a>
+                        <a href="#" class="text-muted"><i class="fas fa-envelope fa-lg"></i></a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+        <button id="scrollTopBtn" class="btn btn-primary magnetic-btn" data-magnetic aria-label="Scroll to top">
+            <i class="fas fa-chevron-up"></i>
+        </button>
+
+        <div id="cursor-follower" class="cursor-follower"></div>
+
+    </main>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.0.45/dist/lenis.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
