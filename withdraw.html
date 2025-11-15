@@ -1,1 +1,227 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantro: Withdraw Funds</title>
+    <meta name="description" content="Securely withdraw your available funds from Quantro to your registered bank account.">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        /* WITHDRAWAL PAGE SPECIFIC STYLES */
+        
+        main {
+            padding-top: var(--nav-height);
+            min-height: 100vh;
+        }
 
+        .withdraw-header {
+            border-bottom: 2px solid var(--color-danger);
+            padding-bottom: 0.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .bank-card {
+            background-color: var(--bs-card-bg);
+            border: 1px solid var(--bs-card-border-color);
+            transition: transform 0.3s ease;
+        }
+
+        .bank-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .balance-box {
+            background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.1), rgba(var(--color-primary-rgb), 0.2));
+            border-left: 5px solid var(--color-primary);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="backgroundCanvas"></canvas>
+
+    <nav class="navbar navbar-expand-lg sticky-top" id="main-nav">
+        <div class="container-fluid container-xxl">
+            <a class="navbar-brand logo-animate" href="index.html">
+                <span class="logo-q">Q</span>uantro
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNav" aria-controls="dashboardNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="dashboardNav">
+                <ul class="navbar-nav align-items-lg-center">
+                    <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="fas fa-home me-1"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="plans.html"><i class="fas fa-gem me-1"></i> Buy Plan</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="withdraw.html"><i class="fas fa-credit-card me-1"></i> Withdraw</a></li>
+                    <li class="nav-item"><a class="nav-link" href="referral.html"><i class="fas fa-user-friends me-1"></i> Referral</a></li>
+                    <li class="nav-item mx-lg-3">
+                        <button class="btn btn-sm btn-outline-danger magnetic-btn click-ripple" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <div class="form-check form-switch ms-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch">
+                            <label class="form-check-label" for="darkModeSwitch"><i class="fas fa-moon"></i></label>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-fluid container-xxl py-5">
+        
+        <header class="withdraw-header">
+            <h1 class="display-5 fw-bold"><i class="fas fa-credit-card text-danger me-2"></i> Funds Withdrawal</h1>
+            <p class="lead">Withdraw your available balance to your registered bank account.</p>
+        </header>
+
+        <section class="row g-4 mb-5">
+            <div class="col-lg-5">
+                <div class="p-4 rounded-4 shadow-sm balance-box h-100">
+                    <h5 class="fw-bold text-primary mb-3"><i class="fas fa-wallet me-2"></i> Your Available Balance</h5>
+                    <div class="fs-1 fw-bolder text-white" id="available-balance-display">₦0.00</div>
+                    <p class="mt-3 text-muted">Only the **Available Wallet Balance** can be withdrawn. Locked funds are currently earning ROI.</p>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="p-4 rounded-4 shadow-lg bank-card">
+                    <h4 class="fw-bold mb-4">Request a Payout</h4>
+                    <form id="withdrawal-form" novalidate>
+                        
+                        <div class="mb-4">
+                            <label for="bank-account-select" class="form-label">Destination Bank Account</label>
+                            <div class="input-group">
+                                <select class="form-select" id="bank-account-select" required>
+                                    <option value="" selected disabled>Select a saved account...</option>
+                                    </select>
+                                <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#bankAccountModal">
+                                    <i class="fas fa-plus"></i> Add New
+                                </button>
+                                <div class="invalid-feedback">Please select a valid bank account or add a new one.</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="withdrawal-amount" class="form-label">Withdrawal Amount (₦)</label>
+                            <input type="number" class="form-control form-control-lg" id="withdrawal-amount" min="1000" step="1000" required>
+                            <div class="form-text text-muted">Minimum withdrawal: ₦1,000. Maximum: ₦2,000,000.</div>
+                            <div class="invalid-feedback">Amount must be between ₦1,000 and the available balance.</div>
+                        </div>
+
+                        <div id="withdrawal-status-message" class="alert d-none mt-4"></div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-danger btn-lg magnetic-btn click-ripple" id="submit-withdrawal-btn">
+                                <i class="fas fa-paper-plane me-2"></i> Submit Withdrawal Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section class="row">
+            <div class="col-12">
+                <div class="p-4 rounded-4 shadow-lg bank-card">
+                    <h4 class="fw-bold mb-3"><i class="fas fa-history me-2"></i> Pending & Completed Withdrawals</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover text-light align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Ref ID</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Account</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="withdrawal-history-body">
+                                <tr><td colspan="5" class="text-center text-muted">No withdrawal history found.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted">Requests are typically processed within 24 hours (Mon-Fri).</small>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <div class="modal fade" id="bankAccountModal" tabindex="-1" aria-labelledby="bankAccountModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold" id="bankAccountModalLabel"><i class="fas fa-bank me-2"></i> Register New Bank Account</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <form id="bank-registration-form">
+              <div class="modal-body">
+                <div class="mb-3">
+                    <label for="account-name" class="form-label">Account Name</label>
+                    <input type="text" class="form-control" id="account-name" required>
+                    <div class="invalid-feedback">Please enter the account holder's name.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="account-number" class="form-label">Account Number</label>
+                    <input type="text" class="form-control" id="account-number" pattern="[0-9]{10}" maxlength="10" required>
+                    <div class="invalid-feedback">Account number must be 10 digits.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="bank-name" class="form-label">Bank Name</label>
+                    <select class="form-select" id="bank-name" required>
+                        <option value="" selected disabled>Select your bank...</option>
+                        <option value="Access Bank">Access Bank</option>
+                        <option value="Zenith Bank">Zenith Bank</option>
+                        <option value="Guaranty Trust Bank (GTB)">Guaranty Trust Bank (GTB)</option>
+                        <option value="First Bank of Nigeria">First Bank of Nigeria</option>
+                        <option value="United Bank for Africa (UBA)">United Bank for Africa (UBA)</option>
+                        <option value="Kuda Bank">Kuda Bank (Microfinance)</option>
+                    </select>
+                    <div class="invalid-feedback">Please select a bank.</div>
+                </div>
+                <div id="bank-reg-status" class="alert d-none mt-3"></div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary magnetic-btn click-ripple" id="register-bank-btn">
+                    <i class="fas fa-save me-2"></i> Save Account
+                </button>
+              </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="script.js"></script> 
+    <script>
+        // Check authentication and load withdrawal data
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentUser = api_getCurrentUser();
+            if (!currentUser) {
+                window.location.href = 'auth.html';
+                return;
+            }
+
+            // Initialize general utilities
+            if (typeof initDynamicBackground === 'function') initDynamicBackground();
+            if (typeof initCursorFollower === 'function') initCursorFollower();
+            if (typeof initMagneticEffects === 'function') initMagneticEffects();
+            if (typeof initDarkModeToggle === 'function') initDarkModeToggle();
+            
+            // Withdrawal specific initializations
+            initWithdrawPage(currentUser);
+            document.getElementById('logout-btn').addEventListener('click', api_logoutUser);
+        });
+    </script>
+</body>
+                  </html>
+  
